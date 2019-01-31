@@ -1,0 +1,23 @@
+.table {
+  height: 100%;
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+table, th, td {
+  border: 2px solid #b3ffb3;
+}
+
+.table td:not(.focused) {
+  overflow: hidden;
+}
+
+.table td input {
+  width: 100%;
+}
+
+.table td input {
+  border: none;
+  outline: none;
+}
