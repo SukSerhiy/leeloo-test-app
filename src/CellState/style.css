@@ -1,0 +1,15 @@
+.cell-state {
+  display: flex;
+}
+
+.cell-state > div {
+  border: 1px solid grey;
+}
+
+.cell-state .cell-coords {
+  width: 10%;
+}
+
+.cell-state .cell-value {
+  width: 60%
+}

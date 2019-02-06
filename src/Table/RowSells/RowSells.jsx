@@ -2,6 +2,10 @@ import React, { Fragment } from 'react';
 import PropTypes from 'prop-types';
 import Cell from '../Cell';
 
+const getXCoord = code => {
+  return String.fromCharCode(65 + code);
+}
+
 const RowCells = props => {
   const { count, coord } = props;
   const cells = new Array(count).fill(null, 0, count - 1);
@@ -10,7 +14,7 @@ const RowCells = props => {
       {cells.map((c, key) => (<Cell 
         key={key} 
         yCoord={coord} 
-        xCoord={key} 
+        xCoord={getXCoord(key)} 
       />))}
     </Fragment>
   )

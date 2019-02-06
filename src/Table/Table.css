@@ -9,12 +9,21 @@ table, th, td {
   border: 2px solid #b3ffb3;
 }
 
+td { 
+  height: 30px; 
+}
+
 .table td:not(.focused) {
   overflow: hidden;
 }
 
-.table td input {
+.table td > * {
+  height: 100%;
   width: 100%;
+}
+
+.table td > div {
+  cursor: cell;
 }
 
 .table td input {

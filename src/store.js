@@ -1,10 +1,21 @@
 import { createStore, applyMiddleware } from 'redux';
+import { composeWithDevTools } from 'redux-devtools-extension';
 import thunk from 'redux-thunk';
 import rootReducer from './reducers/rootReducer';
-export default function configureStore(initialState={}) {
+import Immutable from 'immutable';
+
+const initState = Immutable.fromJS({
+  focusedCell: null,
+  cellValues: [],
+  formulaEnteringCell: null
+});
+
+export default function configureStore(initialState = initState) {
     return createStore(
-        rootReducer,
-        initialState,
+      rootReducer,
+      initialState,
+      composeWithDevTools(
         applyMiddleware(thunk)
+      )
     );
 }
