@@ -10,8 +10,9 @@ import {
   setFormulaEnteringCell,
   unsetFormulaEnteringCell
 } from '../../actions/formulaEnteringCell';
-import { dataTypes, formulaTypes } from '../../enums';
+import { formulaTypes } from '../../enums';
 import { ErrorAlert } from '../../Alerts';
+import { getCellByCoords } from '../../utils/tableUtils';
 import * as operations from '../../operations';
 
 const formulaPattern = /^=(SUM|AVARAGE|CONCAT|HYPERLINK)\(([A-Z]+\d+,\s?)*[A-Z]+\d+\)$/;
@@ -27,17 +28,6 @@ const determineDataType = value => {
     return 'STRING';
   }
 }
-
-/**
- * Gets cell from an array of cells by coords
- * @param {array} cellArr 
- * @param {string} xCoord 
- * @param {number} yCoord 
- * @return {object}
- */
-const getCellByCoords = (cellArr, xCoord, yCoord) => (
-  cellArr.find(cell => cell.xCoord === xCoord && cell.yCoord === yCoord)
-);
 
 /**
  * Return true when all arguments has allowed data types for the operation,
@@ -56,6 +46,9 @@ const checkDataTypes = (args, formulaType) => {
       ) {
         return true;
       }
+      break;
+    case formulaTypes.CONCAT:
+      return true;
     default:
       return false;
   }
@@ -77,8 +70,11 @@ const getOperationResultDataType = (args, formulaType) => {
       if (dataTypes.every(dt => dt === 'MONEY_SUM')) {
         return 'MONEY_SUM';
       }
+      break;
     case formulaTypes.CONCAT:
       return 'STRING';
+    default:
+      return null;
   }
 }
 
@@ -97,6 +93,8 @@ const executeFormula = (formulaType, args) => {
       return operations.concat(...args);
     case formulaTypes.HYPERLINK:
       return operations.hyperlink(...args);
+    default: 
+      return null;
   }
 }
 
@@ -122,27 +120,26 @@ class Cell extends Component {
     focused: false
   };
 
-  componentDidUpdate(prevProps, prevState) {
-    if (this.state.focused && 
-      prevProps.formulaEnteringCell && 
-      this.props.formulaEnteringCell
-    ) {
-      const { formulaEnteringCell: {
-        xCoord,
-        yCoord
-      }, cellValues } = this.props;
-
-      const currentCell = getCellByCoords(cellValues, xCoord, yCoord);
-      const prevCurrentCell = getCellByCoords(prevProps.cellValues, xCoord, yCoord);
-
-      const { formula, formula: { arguments: formulaArgs } } = currentCell;
-      const { formula: { arguments: prevFormulaArgs } } = prevCurrentCell;
-
-      const formulaType = formula.type;
-
-      if (prevFormulaArgs.length !== formulaArgs.length) {
-        const argCoords = formulaArgs.map(arg => `${arg.xCoord}${arg.yCoord}`);
-        this.setState({ value: `=${formulaType}(${argCoords.join(', ')})` });
+  componentDidUpdate(prevProps) {
+    if (this.state.focused) {
+      if (prevProps.formulaEnteringCell && this.props.formulaEnteringCell) {
+        const { formulaEnteringCell: {
+          xCoord,
+          yCoord
+        }, cellValues } = this.props;
+  
+        const currentCell = getCellByCoords(cellValues, xCoord, yCoord);
+        const prevCurrentCell = getCellByCoords(prevProps.cellValues, xCoord, yCoord);
+  
+        const { formula, formula: { arguments: formulaArgs } } = currentCell;
+        const { formula: { arguments: prevFormulaArgs } } = prevCurrentCell;
+  
+        const formulaType = formula.type;
+  
+        if (prevFormulaArgs.length !== formulaArgs.length) {
+          const argCoords = formulaArgs.map(arg => `${arg.xCoord}${arg.yCoord}`);
+          this.setState({ value: `=${formulaType}(${argCoords.join(', ')})` });
+        }
       }
     }
   }
@@ -150,8 +147,7 @@ class Cell extends Component {
   handleCellFocus = () => {
     if (!this.props.formulaEnteringCell) {
       const { yCoord, xCoord, setFocus } = this.props;
-      const { dataType, value } = this.state;
-      setFocus({ yCoord, xCoord, dataType, value });
+      setFocus({ yCoord, xCoord });
       this.setState({ focused: true }, () => {
         this.inputRef.current.focus();
       });
@@ -167,12 +163,9 @@ class Cell extends Component {
       const currentFormulaCell = getCellByCoords(cellValues, xCoord, yCoord);
       const { formula: { arguments: currentArguments } } = currentFormulaCell;
       if (xCoord !== argXCoord || yCoord !== argYCoord) {
-        const { value, dataType } = this.state;
         const newerArgs = currentArguments.concat({
           xCoord: argXCoord,
-          yCoord: argYCoord,
-          dataType,
-          value
+          yCoord: argYCoord
         });
         setFormulaArguments({
           yCoord, 
@@ -194,8 +187,8 @@ class Cell extends Component {
   handleInputChange = (event) => {
     const { value } = event.target;
     let { dataType } = this.state;
-    const { xCoord, yCoord, 
-      cellValues,
+    const { xCoord, 
+      yCoord, 
       setCellValue, 
       setFocus,
       setFormulaEnteringCell,
@@ -208,16 +201,17 @@ class Cell extends Component {
       dataType = determineDataType(value);
     }
 
-    setFocus({ yCoord, xCoord, dataType, value });
+    setFocus({ yCoord, xCoord });
     setCellValue({ xCoord, yCoord, dataType, value });
 
     this.setState({ value, dataType });
 
     if (/^=SUM/.test(value) || 
       /^=AVARAGE/.test(value) || 
-      /^CONCAT/.test(value)
+      /^=CONCAT/.test(value)
     ) {
-      const type = 'SUM';
+      const typeMatch = value.match(/SUM|AVARAGE|CONCAT/);
+      const type = typeMatch && typeMatch[0];
 
       if (!this.props.formulaEnteringCell) {
         setFormulaEnteringCell({ xCoord, yCoord, type });
@@ -239,7 +233,7 @@ class Cell extends Component {
             .match(/\d/g)
             .reduce((prev, curr) => prev + curr);
 
-          return getCellByCoords(cellValues, xCoord, yCoord);
+          return { xCoord, yCoord };
         });
         setFormulaArguments({
           yCoord, 
@@ -262,13 +256,17 @@ class Cell extends Component {
       xCoord, 
       yCoord, 
       setCellValue, 
-      unsetFormulaEnteringCell 
+      unsetFormulaEnteringCell, 
+      removeFocus 
     } = this.props;
     const { value } = this.state;
     if (e.charCode === 13 && formulaEnteringCell) {
       if (formulaPattern.test(value)) {
         const currentCell = getCellByCoords(cellValues, xCoord, yCoord);
-        const { formula: { arguments: formulaArgs, type } } = currentCell;
+        const { formula: { arguments: formulaArgCoord, type } } = currentCell;
+        const formulaArgs = formulaArgCoord.map(arg => 
+          getCellByCoords(cellValues, arg.xCoord, arg.yCoord)
+        ).filter(cell => cell);
         const areDataTypesValid = checkDataTypes(formulaArgs, type);
         if (areDataTypesValid) {
           const argsValues = formulaArgs.map(arg => arg.value);
@@ -283,6 +281,7 @@ class Cell extends Component {
         handleError('Incorrect syntax for being a formula');
       }
       unsetFormulaEnteringCell();
+      removeFocus();
       this.setState({ focused: false });
     }
   }
@@ -317,6 +316,7 @@ const mapStateToProps = state => {
 
 const mapDispatchToProps = dispatch => ({
   setFocus: payload => dispatch(setFocus(payload)),
+  removeFocus: payload => dispatch(removeFocus(removeFocus)),
   setCellValue: payload => dispatch(setCellValue(payload)),
   setFormula: payload => dispatch(setFormula(payload)),
   setFormulaArguments: payload => dispatch(setFormulaArguments(payload)),

@@ -24,6 +24,7 @@ td {
 
 .table td > div {
   cursor: cell;
+  text-align: left;
 }
 
 .table td input {
