@@ -14,7 +14,7 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/3.6.3/workbox-sw.js");
 
 importScripts(
-  "/SukSerhiy/leeloo-test-app/precache-manifest.2f5037320a8467f80f97e4ac8a2dac4a.js"
+  "/leeloo-test-app/precache-manifest.aea8c457aff074b363b90fcefadba9b6.js"
 );
 
 workbox.clientsClaim();
@@ -28,7 +28,7 @@ self.__precacheManifest = [].concat(self.__precacheManifest || []);
 workbox.precaching.suppressWarnings();
 workbox.precaching.precacheAndRoute(self.__precacheManifest, {});
 
-workbox.routing.registerNavigationRoute("/SukSerhiy/leeloo-test-app/index.html", {
+workbox.routing.registerNavigationRoute("/leeloo-test-app/index.html", {
   
   blacklist: [/^\/_/,/\/[^\/]+\.[^\/]+$/],
 });
